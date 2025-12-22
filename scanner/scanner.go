@@ -19,6 +19,7 @@ func ScanDomain(host string, verbose bool) {
 	report, err := client.Analyze(ctx, host, false)
 	if err != nil {
 		fmt.Printf("[!] Error: Failed to initiate scan for %s: %v\n", host, err)
+		return
 	}
 
 	tickerDelaySeconds := 10 * time.Second
