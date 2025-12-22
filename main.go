@@ -8,6 +8,8 @@ import (
 )
 
 func main() {
+
+	verboseParameter := flag.Bool("verbose", false, "Include extra details in summary report")
 	flag.Parse()
 
 	tailArgs := flag.Args()
@@ -19,5 +21,5 @@ func main() {
 
 	host := tailArgs[0]
 
-	scanner.ScanDomain(host)
+	scanner.ScanDomain(host, *verboseParameter)
 }
