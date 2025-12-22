@@ -3,7 +3,6 @@ package ssllabs
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"paulrojasg/sslchecker/domain"
 )
@@ -46,7 +45,10 @@ func (c *Client) Analyze(ctx context.Context, host string, startNew bool) (*doma
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return nil, &domain.APIError{
+			StatusCode: resp.StatusCode,
+			Message:    resp.Status,
+		}
 	}
 
 	var report domain.HostReport

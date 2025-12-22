@@ -21,5 +21,10 @@ func main() {
 
 	host := tailArgs[0]
 
-	scanner.ScanDomain(host, *verboseParameter)
+	err := scanner.ScanDomain(host, *verboseParameter)
+	if err != nil {
+		fmt.Println("[FATAL]", err)
+		os.Exit(1)
+	}
+	os.Exit(0)
 }
