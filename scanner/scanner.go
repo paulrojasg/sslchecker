@@ -126,10 +126,8 @@ func ScanDomain(host string, verbose bool) error {
 				formatter.PrintHostSummary(*report, verbose)
 				return nil
 			case domain.StatusError:
-				//fmt.Printf("[ERROR]  %s\n", report.StatusMessage)
 				return fmt.Errorf("%s", report.StatusMessage)
 			default:
-				//fmt.Printf("[ERROR]  Unexpected status: %s\n", reportStatus)
 				return fmt.Errorf("Unexpected status: %s", reportStatus)
 			}
 		}
