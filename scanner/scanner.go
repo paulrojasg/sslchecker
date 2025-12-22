@@ -113,7 +113,7 @@ func ScanDomain(host string, verbose bool) error {
 			if reportStatus != previousStatus {
 				if reportStatus == domain.StatusInProgress {
 					ticker.Reset(10 * time.Second)
-					fmt.Printf("[INFO]   Endpoints found: %d", len(report.Endpoints))
+					fmt.Printf("\n[INFO]   Endpoints found: %d", len(report.Endpoints))
 				}
 				previousStatus = reportStatus
 			}
