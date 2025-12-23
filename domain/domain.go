@@ -44,6 +44,7 @@ type ScanParameters struct {
 	IgnoreMismatch bool
 	Timeout        uint
 	Output         string
+	SteadyPolling  bool
 }
 
 const (

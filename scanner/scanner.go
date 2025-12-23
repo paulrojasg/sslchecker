@@ -4,12 +4,24 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"paulrojasg/sslchecker/domain"
 	"paulrojasg/sslchecker/formatter"
 	"paulrojasg/sslchecker/ssllabs"
 	"time"
 )
+
+func calculateTicker(baseDelay int, steadyPolling bool, rng *rand.Rand) time.Duration {
+	delay := time.Duration(baseDelay) * time.Second
+
+	if !steadyPolling {
+		jitterSeconds := rng.Intn((baseDelay*20)/100) + 1
+		delay += time.Duration(jitterSeconds) * time.Second
+	}
+
+	return delay
+}
 
 func analyzeWithRetry(
 	ctx context.Context,
@@ -58,9 +70,12 @@ func analyzeWithRetry(
 }
 
 // TODO: Show maximum and current number of assessments in verbose mode
-func ScanDomain(host string, parameters *domain.ScanParameters) error {
+func ScanDomain(host string, parameters *domain.ScanParameters, rng *rand.Rand) error {
 
+	dnsDelay := 5
+	postDnsDelay := 10
 	verbose := parameters.Verbose
+	steadyPolling := parameters.SteadyPolling
 
 	client := ssllabs.NewClient()
 
@@ -88,7 +103,7 @@ func ScanDomain(host string, parameters *domain.ScanParameters) error {
 		return fmt.Errorf("Failed to initiate scan for %s: %v", host, err)
 	}
 
-	tickerDelaySeconds := 10 * time.Second
+	tickerDelaySeconds := postDnsDelay
 	previousStatus := report.Status
 
 	fmt.Printf("\n>>> Target: %s\n", host)
@@ -96,7 +111,7 @@ func ScanDomain(host string, parameters *domain.ScanParameters) error {
 
 	switch previousStatus {
 	case domain.StatusDNS:
-		tickerDelaySeconds = 5 * time.Second
+		tickerDelaySeconds = dnsDelay
 	case domain.StatusInProgress:
 		fmt.Printf("[INFO]   Detected %d endpoints\n", len(report.Endpoints))
 		formatter.PrintEndpointProgress(*report, *parameters)
@@ -116,7 +131,7 @@ func ScanDomain(host string, parameters *domain.ScanParameters) error {
 
 	parameters.New = false
 
-	ticker := time.NewTicker(tickerDelaySeconds)
+	ticker := time.NewTicker(calculateTicker(tickerDelaySeconds, steadyPolling, rng))
 	defer ticker.Stop()
 
 	for {
@@ -136,7 +151,7 @@ func ScanDomain(host string, parameters *domain.ScanParameters) error {
 
 			if reportStatus != previousStatus {
 				if reportStatus == domain.StatusInProgress {
-					ticker.Reset(10 * time.Second)
+					tickerDelaySeconds = postDnsDelay
 					fmt.Printf("\n[INFO]   Endpoints found: %d", len(report.Endpoints))
 				}
 				previousStatus = reportStatus
@@ -159,6 +174,7 @@ func ScanDomain(host string, parameters *domain.ScanParameters) error {
 			default:
 				return fmt.Errorf("Unexpected status: %s", reportStatus)
 			}
+			ticker.Reset(calculateTicker(tickerDelaySeconds, steadyPolling, rng))
 		}
 	}
 }

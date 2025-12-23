@@ -3,9 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math/rand"
 	"os"
 	"paulrojasg/sslchecker/domain"
 	"paulrojasg/sslchecker/scanner"
+	"time"
 )
 
 func validateParameters(parameters *domain.ScanParameters) error {
@@ -22,6 +24,8 @@ func validateParameters(parameters *domain.ScanParameters) error {
 }
 
 func main() {
+
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	var scanParameters domain.ScanParameters
 
 	flag.BoolVar(
@@ -87,6 +91,13 @@ func main() {
 		"Append raw API responses to file (JSON Lines format)",
 	)
 
+	flag.BoolVar(
+		&scanParameters.SteadyPolling,
+		"steady-polling",
+		false,
+		"Disable randomized polling intervals (use fixed delays)",
+	)
+
 	flag.Parse()
 
 	if err := validateParameters(&scanParameters); err != nil {
@@ -105,7 +116,7 @@ func main() {
 
 	host := tailArgs[0]
 
-	if err := scanner.ScanDomain(host, &scanParameters); err != nil {
+	if err := scanner.ScanDomain(host, &scanParameters, rng); err != nil {
 		fmt.Println("[FATAL]", err)
 		os.Exit(1)
 	}
