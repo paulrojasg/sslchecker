@@ -23,6 +23,7 @@ type Endpoint struct {
 	ServerName           string `json:"serverName"`
 	Delegation           int    `json:"delegation"`
 	StatusDetailsMessage string `json:"statusDetailsMessage"`
+	StatusMessage        string `json:"statusMessage"`
 }
 
 type HostReport struct {
@@ -30,6 +31,16 @@ type HostReport struct {
 	Status        AssessmentStatus `json:"status"`
 	StatusMessage string           `json:"statusMessage"`
 	Endpoints     []Endpoint       `json:"endpoints"`
+}
+
+type ScanParameters struct {
+	Verbose        bool
+	New            bool
+	Cache          bool
+	MaxAge         uint
+	All            string
+	Publish        bool
+	IgnoreMismatch bool
 }
 
 const (

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"paulrojasg/sslchecker/domain"
+	"strconv"
 )
 
 const defaultBaseURL = "https://api.ssllabs.com/api/v2/"
@@ -21,7 +22,7 @@ func NewClient() *Client {
 	}
 }
 
-func (c *Client) Analyze(ctx context.Context, host string, startNew bool) (*domain.HostReport, error) {
+func (c *Client) Analyze(ctx context.Context, host string, parameters domain.ScanParameters) (*domain.HostReport, error) {
 	req, err := http.NewRequestWithContext(ctx,
 		"GET",
 		c.baseURL+"/analyze",
@@ -33,9 +34,28 @@ func (c *Client) Analyze(ctx context.Context, host string, startNew bool) (*doma
 
 	q := req.URL.Query()
 	q.Add("host", host)
-	if startNew {
+
+	// Adding query parameters
+
+	if parameters.New {
 		q.Add("startNew", "on")
 	}
+	if parameters.Cache {
+		q.Add("fromCache", "on")
+		if parameters.MaxAge > 0 {
+			q.Add("maxAge", strconv.FormatUint(uint64(parameters.MaxAge), 10))
+		}
+	}
+	if parameters.All != "" {
+		q.Add("all", parameters.All)
+	}
+	if parameters.Publish {
+		q.Add("publish", "on")
+	}
+	if parameters.IgnoreMismatch {
+		q.Add("ignoreMismatch", "on")
+	}
+
 	req.URL.RawQuery = q.Encode()
 
 	resp, err := c.httpClient.Do(req)

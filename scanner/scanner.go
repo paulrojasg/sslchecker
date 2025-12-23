@@ -15,7 +15,7 @@ func analyzeWithRetry(
 	ctx context.Context,
 	client *ssllabs.Client,
 	host string,
-	startNew bool,
+	parameters domain.ScanParameters,
 ) (*domain.HostReport, error) {
 
 	const maxRetries = 3
@@ -24,7 +24,7 @@ func analyzeWithRetry(
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 
-		report, err := client.Analyze(ctx, host, startNew)
+		report, err := client.Analyze(ctx, host, parameters)
 		if err != nil {
 			var apiErr *domain.APIError
 
@@ -57,7 +57,8 @@ func analyzeWithRetry(
 	return nil, fmt.Errorf("Maximum retries limit reached")
 }
 
-func ScanDomain(host string, verbose bool) error {
+// TODO: Show maximum and current number of assessments in verbose mode
+func ScanDomain(host string, parameters *domain.ScanParameters) error {
 	timeoutLimit := 5 * time.Minute
 
 	client := ssllabs.NewClient()
@@ -66,7 +67,7 @@ func ScanDomain(host string, verbose bool) error {
 
 	startTime := time.Now()
 
-	report, err := analyzeWithRetry(ctx, client, host, false)
+	report, err := analyzeWithRetry(ctx, client, host, *parameters)
 	if err != nil {
 		return fmt.Errorf("Failed to initiate scan for %s: %v", host, err)
 	}
@@ -82,15 +83,17 @@ func ScanDomain(host string, verbose bool) error {
 		tickerDelaySeconds = 5 * time.Second
 	case domain.StatusInProgress:
 		fmt.Printf("[INFO]   Detected %d endpoints\n", len(report.Endpoints))
-		formatter.PrintEndpointProgress(*report)
+		formatter.PrintEndpointProgress(*report, *parameters)
 	case domain.StatusReady:
-		formatter.PrintHostSummary(*report, verbose)
+		formatter.PrintHostSummary(*report, parameters.Verbose)
 		return nil
 	case domain.StatusError:
 		return fmt.Errorf("%s", report.StatusMessage)
 	default:
 		return fmt.Errorf("Unexpected status: %s", previousStatus)
 	}
+
+	parameters.New = false
 
 	ticker := time.NewTicker(tickerDelaySeconds)
 	defer ticker.Stop()
@@ -100,7 +103,7 @@ func ScanDomain(host string, verbose bool) error {
 		case <-ctx.Done():
 			return fmt.Errorf("[!] TIMEOUT: Global time limit reached.")
 		case <-ticker.C:
-			report, err := analyzeWithRetry(ctx, client, host, false)
+			report, err := analyzeWithRetry(ctx, client, host, *parameters)
 			if err != nil {
 				return fmt.Errorf("Failed to refresh data: %v", err)
 			}
@@ -121,9 +124,9 @@ func ScanDomain(host string, verbose bool) error {
 			switch reportStatus {
 			case domain.StatusDNS:
 			case domain.StatusInProgress:
-				formatter.PrintEndpointProgress(*report)
+				formatter.PrintEndpointProgress(*report, *parameters)
 			case domain.StatusReady:
-				formatter.PrintHostSummary(*report, verbose)
+				formatter.PrintHostSummary(*report, parameters.Verbose)
 				return nil
 			case domain.StatusError:
 				return fmt.Errorf("%s", report.StatusMessage)

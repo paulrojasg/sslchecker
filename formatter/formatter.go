@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func PrintEndpointProgress(report domain.HostReport) {
+func PrintEndpointProgress(report domain.HostReport, parameters domain.ScanParameters) {
 	readyEndpoints := 0
 	for _, endpoint := range report.Endpoints {
 		if int(endpoint.Progress) == 100 {
@@ -16,35 +16,49 @@ func PrintEndpointProgress(report domain.HostReport) {
 	}
 
 	timestamp := time.Now().Format("15:04:05")
-	fmt.Printf("\n[%s] ASSESSMENT PROGRESS: %d/%d COMPLETE\n", timestamp, readyEndpoints, len(report.Endpoints))
+
+	// Always show global progress
+	fmt.Printf(
+		"\n[%s] ASSESSMENT PROGRESS: %d/%d COMPLETE\n",
+		timestamp,
+		readyEndpoints,
+		len(report.Endpoints),
+	)
+
+	// Stop here if not verbose
+	if !parameters.Verbose {
+		return
+	}
+
+	// Verbose: detailed endpoint progress
 	fmt.Println(strings.Repeat("-", 60))
 
 	for _, endpoint := range report.Endpoints {
-
-		progress := int(endpoint.Progress)
-		statusDetailsMessage := endpoint.StatusDetailsMessage
+		progress := max(int(endpoint.Progress), 0)
 
 		status := "  PENDING  "
+		inProgress := false
 
-		in_progress := false
-
-		if progress >= 100 {
+		switch {
+		case progress >= 100:
 			status = "   READY   "
-		} else if statusDetailsMessage != "" {
+		case endpoint.StatusDetailsMessage != "":
 			status = "IN PROGRESS"
-			in_progress = true
+			inProgress = true
 		}
 
-		if progress == -1 {
-			progress = 0
+		fmt.Printf(
+			"  [%-11s] %3d%%  → %s",
+			status,
+			progress,
+			endpoint.IPAddress,
+		)
+
+		if inProgress {
+			fmt.Printf(" | %s", endpoint.StatusDetailsMessage)
 		}
 
-		fmt.Printf("  [%s] %3d%%  → %s ", status, progress, endpoint.IPAddress)
-		if in_progress {
-			fmt.Printf("| %s\n", statusDetailsMessage)
-		} else {
-			fmt.Printf("\n")
-		}
+		fmt.Println()
 	}
 }
 
@@ -63,10 +77,15 @@ func PrintHostSummary(report domain.HostReport, verbose bool) {
 	fmt.Println("  " + strings.Repeat("-", 25))
 
 	for _, endpoint := range report.Endpoints {
-		fmt.Printf("  %-8s  %-15s\n",
+		fmt.Printf("  %-8s  %-15s",
 			"["+endpoint.Grade+"]",
 			endpoint.IPAddress,
 		)
+		if endpoint.Grade == "" {
+			fmt.Printf(" | %s\n", endpoint.StatusMessage)
+		} else {
+			fmt.Printf("\n")
+		}
 	}
 
 	if verbose {
