@@ -41,6 +41,7 @@ type ScanParameters struct {
 	All            string
 	Publish        bool
 	IgnoreMismatch bool
+	Timeout        uint
 }
 
 const (

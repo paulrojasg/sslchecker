@@ -59,11 +59,27 @@ func analyzeWithRetry(
 
 // TODO: Show maximum and current number of assessments in verbose mode
 func ScanDomain(host string, parameters *domain.ScanParameters) error {
-	timeoutLimit := 5 * time.Minute
+
+	verbose := parameters.Verbose
 
 	client := ssllabs.NewClient()
-	ctx, cancelCtxTimeout := context.WithTimeout(context.Background(), timeoutLimit)
-	defer cancelCtxTimeout()
+
+	var ctx context.Context
+	var cancelCtx context.CancelFunc
+	if parameters.Timeout > 0 {
+		timeoutLimit := time.Duration(parameters.Timeout) * time.Second
+		ctx, cancelCtx = context.WithTimeout(context.Background(), timeoutLimit)
+		if verbose {
+			fmt.Printf("[INFO] Global timeout: %s", timeoutLimit)
+		}
+	} else {
+		ctx, cancelCtx = context.WithCancel(context.Background())
+		if verbose {
+			fmt.Printf("[INFO] Global timeout disabled")
+		}
+	}
+
+	defer cancelCtx()
 
 	startTime := time.Now()
 

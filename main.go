@@ -73,6 +73,13 @@ func main() {
 		"Proceed with assessment even if certificate hostname does not match the target host",
 	)
 
+	flag.UintVar(
+		&scanParameters.Timeout,
+		"timeout",
+		300,
+		"Maximum time (in seconds) to wait for the assessment to complete. Use 0 to disable the timeout",
+	)
+
 	flag.Parse()
 
 	if err := validateParameters(&scanParameters); err != nil {
