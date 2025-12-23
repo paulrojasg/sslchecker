@@ -22,15 +22,29 @@ func PrintEndpointProgress(report domain.HostReport) {
 	for _, endpoint := range report.Endpoints {
 
 		progress := int(endpoint.Progress)
+		statusDetailsMessage := endpoint.StatusDetailsMessage
 
-		status := "PENDING"
+		status := "  PENDING  "
+
+		in_progress := false
 
 		if progress >= 100 {
-			status = " DONE  "
-		} else if progress == -1 {
+			status = "   READY   "
+		} else if statusDetailsMessage != "" {
+			status = "IN PROGRESS"
+			in_progress = true
+		}
+
+		if progress == -1 {
 			progress = 0
 		}
-		fmt.Printf("  [%s] %3d%%  → %s\n", status, progress, endpoint.IPAddress)
+
+		fmt.Printf("  [%s] %3d%%  → %s ", status, progress, endpoint.IPAddress)
+		if in_progress {
+			fmt.Printf("| %s\n", statusDetailsMessage)
+		} else {
+			fmt.Printf("\n")
+		}
 	}
 }
 

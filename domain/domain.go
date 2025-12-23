@@ -14,14 +14,15 @@ func (e *APIError) Error() string {
 }
 
 type Endpoint struct {
-	Grade             string `json:"grade"`
-	IPAddress         string `json:"ipAddress"`
-	Progress          int    `json:"progress"`
-	GradeTrustIgnored string `json:"gradeTrustIgnored"`
-	HasWarnings       bool   `json:"hasWarnings"`
-	IsExceptional     bool   `json:"isExceptional"`
-	ServerName        string `json:"serverName"`
-	Delegation        int    `json:"delegation"`
+	Grade                string `json:"grade"`
+	IPAddress            string `json:"ipAddress"`
+	Progress             int    `json:"progress"`
+	GradeTrustIgnored    string `json:"gradeTrustIgnored"`
+	HasWarnings          bool   `json:"hasWarnings"`
+	IsExceptional        bool   `json:"isExceptional"`
+	ServerName           string `json:"serverName"`
+	Delegation           int    `json:"delegation"`
+	StatusDetailsMessage string `json:"statusDetailsMessage"`
 }
 
 type HostReport struct {
