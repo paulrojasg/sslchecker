@@ -2,10 +2,37 @@ package formatter
 
 import (
 	"fmt"
+	"os"
 	"paulrojasg/sslchecker/domain"
 	"strings"
 	"time"
 )
+
+func WriteRawJSONFile(report *domain.HostReport, parameters domain.ScanParameters) error {
+
+	file, err := os.OpenFile(
+		parameters.Output,
+		os.O_CREATE|os.O_WRONLY|os.O_APPEND,
+		0644,
+	)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	if _, err := file.Write(report.RawJSON); err != nil {
+		return err
+	}
+
+	if _, err := file.Write([]byte("\n")); err != nil {
+		return err
+	}
+	if parameters.Verbose {
+		fmt.Printf("[INFO] Raw API response saved to %s\n", parameters.Output)
+	}
+
+	return nil
+}
 
 func PrintEndpointProgress(report domain.HostReport, parameters domain.ScanParameters) {
 	readyEndpoints := 0

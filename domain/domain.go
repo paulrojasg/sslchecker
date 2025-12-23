@@ -31,6 +31,7 @@ type HostReport struct {
 	Status        AssessmentStatus `json:"status"`
 	StatusMessage string           `json:"statusMessage"`
 	Endpoints     []Endpoint       `json:"endpoints"`
+	RawJSON       []byte           `json:"-"`
 }
 
 type ScanParameters struct {
@@ -42,6 +43,7 @@ type ScanParameters struct {
 	Publish        bool
 	IgnoreMismatch bool
 	Timeout        uint
+	Output         string
 }
 
 const (

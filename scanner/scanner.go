@@ -102,6 +102,11 @@ func ScanDomain(host string, parameters *domain.ScanParameters) error {
 		formatter.PrintEndpointProgress(*report, *parameters)
 	case domain.StatusReady:
 		formatter.PrintHostSummary(*report, parameters.Verbose)
+		if parameters.Output != "" {
+			if err := formatter.WriteRawJSONFile(report, *parameters); err != nil {
+				return fmt.Errorf("Error while writing into file: %s", err)
+			}
+		}
 		return nil
 	case domain.StatusError:
 		return fmt.Errorf("%s", report.StatusMessage)
@@ -143,6 +148,11 @@ func ScanDomain(host string, parameters *domain.ScanParameters) error {
 				formatter.PrintEndpointProgress(*report, *parameters)
 			case domain.StatusReady:
 				formatter.PrintHostSummary(*report, parameters.Verbose)
+				if parameters.Output != "" {
+					if err := formatter.WriteRawJSONFile(report, *parameters); err != nil {
+						return fmt.Errorf("Error while writing into file: %s", err)
+					}
+				}
 				return nil
 			case domain.StatusError:
 				return fmt.Errorf("%s", report.StatusMessage)

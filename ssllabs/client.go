@@ -3,6 +3,7 @@ package ssllabs
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"paulrojasg/sslchecker/domain"
 	"strconv"
@@ -62,6 +63,7 @@ func (c *Client) Analyze(ctx context.Context, host string, parameters domain.Sca
 	if err != nil {
 		return nil, err
 	}
+	body, err := io.ReadAll(resp.Body)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -72,9 +74,12 @@ func (c *Client) Analyze(ctx context.Context, host string, parameters domain.Sca
 	}
 
 	var report domain.HostReport
-	if err := json.NewDecoder(resp.Body).Decode(&report); err != nil {
+
+	if err := json.Unmarshal(body, &report); err != nil {
 		return nil, err
 	}
+
+	report.RawJSON = body
 
 	return &report, nil
 }

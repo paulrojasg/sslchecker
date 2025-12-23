@@ -80,6 +80,13 @@ func main() {
 		"Maximum time (in seconds) to wait for the assessment to complete. Use 0 to disable the timeout",
 	)
 
+	flag.StringVar(
+		&scanParameters.Output,
+		"output",
+		"",
+		"Append raw API responses to file (JSON Lines format)",
+	)
+
 	flag.Parse()
 
 	if err := validateParameters(&scanParameters); err != nil {
