@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func WriteRawJSONFile(report *domain.HostReport, parameters domain.ScanParameters) error {
+func WriteRawJSONFile(report *domain.HostReport, parameters *domain.ScanParameters) error {
 
 	file, err := os.OpenFile(
 		parameters.Output,
@@ -34,7 +34,7 @@ func WriteRawJSONFile(report *domain.HostReport, parameters domain.ScanParameter
 	return nil
 }
 
-func PrintEndpointProgress(report domain.HostReport, parameters domain.ScanParameters) {
+func PrintEndpointProgress(report domain.HostReport, parameters *domain.ScanParameters) {
 	readyEndpoints := 0
 	for _, endpoint := range report.Endpoints {
 		if int(endpoint.Progress) == 100 {
@@ -89,7 +89,8 @@ func PrintEndpointProgress(report domain.HostReport, parameters domain.ScanParam
 	}
 }
 
-func PrintHostSummary(report domain.HostReport, verbose bool) {
+func PrintHostSummary(report domain.HostReport, parameters *domain.ScanParameters) {
+
 	fmt.Println("\n" + strings.Repeat("=", 60))
 	fmt.Println("FINAL ASSESSMENT SUMMARY")
 	fmt.Printf("Target Host: %s\n", report.Host)
@@ -115,7 +116,7 @@ func PrintHostSummary(report domain.HostReport, verbose bool) {
 		}
 	}
 
-	if verbose {
+	if parameters.Verbose {
 		fmt.Println("\nDETAILED ENDPOINT SPECIFICATIONS")
 		fmt.Println(strings.Repeat("-", 60))
 

@@ -86,6 +86,17 @@ func analyzeWithRetry(
 	return nil, fmt.Errorf("Maximum retries limit reached\n")
 }
 
+func continueAnalyzeWIthRetry(
+	host string,
+	state scanState,
+) (*domain.HostReport, error) {
+
+	newParameters := *state.parameters
+	newParameters.New = false
+	state.parameters = &newParameters
+	return analyzeWithRetry(host, state)
+}
+
 func scanHost(host string, state scanState) error {
 	dnsDelay := 5
 	postDnsDelay := 10
@@ -114,11 +125,11 @@ func scanHost(host string, state scanState) error {
 		tickerDelaySeconds = dnsDelay
 	case domain.StatusInProgress:
 		fmt.Printf("[INFO]   Detected %d endpoints\n", len(report.Endpoints))
-		formatter.PrintEndpointProgress(*report, *parameters)
+		formatter.PrintEndpointProgress(*report, parameters)
 	case domain.StatusReady:
-		formatter.PrintHostSummary(*report, parameters.Verbose)
+		formatter.PrintHostSummary(*report, parameters)
 		if parameters.Output != "" {
-			if err := formatter.WriteRawJSONFile(report, *parameters); err != nil {
+			if err := formatter.WriteRawJSONFile(report, parameters); err != nil {
 				return fmt.Errorf("Error while writing into file: %s", err)
 			}
 		}
@@ -129,8 +140,6 @@ func scanHost(host string, state scanState) error {
 		return fmt.Errorf("Unexpected status: %s\n", previousStatus)
 	}
 
-	parameters.New = false
-
 	ticker := time.NewTicker(calculateTicker(tickerDelaySeconds, steadyPolling, rng))
 	defer ticker.Stop()
 
@@ -139,7 +148,7 @@ func scanHost(host string, state scanState) error {
 		case <-ctxObj.Done():
 			return fmt.Errorf("[!] TIMEOUT: Global time limit reached.")
 		case <-ticker.C:
-			report, err := analyzeWithRetry(host, state)
+			report, err := continueAnalyzeWIthRetry(host, state)
 			if err != nil {
 				return fmt.Errorf("Failed to refresh data: %v", err)
 			}
@@ -160,11 +169,11 @@ func scanHost(host string, state scanState) error {
 			switch reportStatus {
 			case domain.StatusDNS:
 			case domain.StatusInProgress:
-				formatter.PrintEndpointProgress(*report, *parameters)
+				formatter.PrintEndpointProgress(*report, parameters)
 			case domain.StatusReady:
-				formatter.PrintHostSummary(*report, parameters.Verbose)
+				formatter.PrintHostSummary(*report, parameters)
 				if parameters.Output != "" {
-					if err := formatter.WriteRawJSONFile(report, *parameters); err != nil {
+					if err := formatter.WriteRawJSONFile(report, parameters); err != nil {
 						return fmt.Errorf("Error while writing into file: %s", err)
 					}
 				}
