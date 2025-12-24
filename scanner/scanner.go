@@ -15,7 +15,7 @@ import (
 type scanState struct {
 	parameters  *domain.ScanParameters
 	rng         *rand.Rand
-	ctx         *context.Context
+	ctx         context.Context
 	client      *ssllabs.Client
 	startTime   time.Time
 	scanIndex   int
@@ -41,7 +41,7 @@ func analyzeWithRetry(
 	const delaySeconds = 30
 	const retryDelay = delaySeconds * time.Second
 
-	ctx := *state.ctx
+	ctx := state.ctx
 	client := state.client
 	parameters := *state.parameters
 
@@ -90,7 +90,7 @@ func scanHost(host string, state scanState) error {
 	dnsDelay := 5
 	postDnsDelay := 10
 
-	ctxObj := *state.ctx
+	ctxObj := state.ctx
 	startTime := state.startTime
 	rng := state.rng
 	parameters := state.parameters
@@ -213,7 +213,7 @@ func ScanHosts(hosts []string, parameters *domain.ScanParameters, rng *rand.Rand
 		state := scanState{
 			parameters:  parameters,
 			rng:         rng,
-			ctx:         &ctx,
+			ctx:         ctx,
 			client:      client,
 			startTime:   startTime,
 			scanIndex:   ind + 1,
