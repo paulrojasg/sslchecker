@@ -1,14 +1,43 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"math/rand"
 	"os"
 	"paulrojasg/sslchecker/domain"
 	"paulrojasg/sslchecker/scanner"
+	"strings"
 	"time"
 )
+
+func readFile(path string) ([]string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file: %s", err)
+	}
+	defer file.Close()
+
+	var hosts []string
+
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		host := scanner.Text()
+		if strings.ContainsAny(host, " \t\n\r") {
+			fmt.Printf("Reading host '%s' from file failed: Line contains whitespace\n", host)
+		} else {
+			hosts = append(hosts, host)
+		}
+
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading file: %s", err)
+	}
+	return hosts, nil
+}
 
 func validateParameters(parameters *domain.ScanParameters) error {
 	if all := parameters.All; all != "" && all != "on" && all != "done" {
@@ -105,6 +134,13 @@ func main() {
 		"Scanning API's base url",
 	)
 
+	flag.StringVar(
+		&scanParameters.HostsFile,
+		"hosts-file",
+		"",
+		"File path to a host list for scanning. May be combined with hosts supplied as tail arguments.",
+	)
+
 	flag.Parse()
 
 	if err := validateParameters(&scanParameters); err != nil {
@@ -115,6 +151,18 @@ func main() {
 	}
 
 	hosts := flag.Args()
+
+	if file := scanParameters.HostsFile; file != "" {
+		if fileHosts, err := readFile(file); err == nil {
+			for _, h := range fileHosts {
+				hosts = append(hosts, h)
+			}
+		} else {
+			fmt.Println("[FATAL]", err)
+			os.Exit(1)
+		}
+	}
+
 	if len(hosts) == 0 {
 		fmt.Println("Usage: sslcheck [options] <hosts>")
 		flag.PrintDefaults()

@@ -46,6 +46,7 @@ type ScanParameters struct {
 	Output         string
 	SteadyPolling  bool
 	BaseUrl        string
+	HostsFile      string
 }
 
 const (
