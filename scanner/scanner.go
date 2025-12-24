@@ -13,14 +13,15 @@ import (
 )
 
 type scanState struct {
-	parameters  *domain.ScanParameters
-	rng         *rand.Rand
-	ctx         context.Context
-	client      *ssllabs.Client
-	startTime   time.Time
-	scanIndex   int
-	globalError *string
+	parameters *domain.ScanParameters
+	rng        *rand.Rand
+	ctx        context.Context
+	client     *ssllabs.Client
+	startTime  time.Time
+	scanIndex  int
 }
+
+var errMaxTriesExceeded = errors.New("Maximum retries limit reached when scanning one of the hosts\n")
 
 func calculateTicker(baseDelay int, steadyPolling bool, rng *rand.Rand) time.Duration {
 	delay := time.Duration(baseDelay) * time.Second
@@ -82,8 +83,7 @@ func analyzeWithRetry(
 		}
 		return report, err
 	}
-	*state.globalError = "retries_limit_reached"
-	return nil, fmt.Errorf("Maximum retries limit reached\n")
+	return nil, errMaxTriesExceeded
 }
 
 func continueAnalyzeWIthRetry(
@@ -111,7 +111,7 @@ func scanHost(host string, state scanState) error {
 
 	report, err := analyzeWithRetry(host, state)
 	if err != nil {
-		return fmt.Errorf("Failed to initiate scan for %s: %v", host, err)
+		return fmt.Errorf("Failed to initiate scan for %s: %w", host, err)
 	}
 
 	tickerDelaySeconds := postDnsDelay
@@ -150,7 +150,7 @@ func scanHost(host string, state scanState) error {
 		case <-ticker.C:
 			report, err := continueAnalyzeWIthRetry(host, state)
 			if err != nil {
-				return fmt.Errorf("Failed to refresh data: %v", err)
+				return fmt.Errorf("Failed to initiate scan for %s: %w", host, err)
 			}
 
 			reportStatus := report.Status
@@ -216,29 +216,22 @@ func ScanHosts(hosts []string, parameters *domain.ScanParameters, rng *rand.Rand
 
 	failedHosts := []string{}
 
-	globalError := ""
-
 	for ind, host := range hosts {
 		state := scanState{
-			parameters:  parameters,
-			rng:         rng,
-			ctx:         ctx,
-			client:      client,
-			startTime:   startTime,
-			scanIndex:   ind + 1,
-			globalError: &globalError,
+			parameters: parameters,
+			rng:        rng,
+			ctx:        ctx,
+			client:     client,
+			startTime:  startTime,
+			scanIndex:  ind + 1,
 		}
 		if err := scanHost(host, state); err != nil {
-			fmt.Printf("%s", err)
 			failedHosts = append(failedHosts, host)
-		}
-		if err := *state.globalError; err != "" {
-			if err == "retries_limit_reached" {
-				return fmt.Errorf("Maximum retries limit reached when scanning one of the hosts")
+			if errors.Is(err, errMaxTriesExceeded) {
+				return fmt.Errorf("%w", err)
 			} else {
 				return fmt.Errorf("Unknown error was found")
 			}
-
 		}
 	}
 	if len(failedHosts) > 0 {
