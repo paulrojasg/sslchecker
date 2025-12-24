@@ -102,21 +102,19 @@ func main() {
 
 	if err := validateParameters(&scanParameters); err != nil {
 		fmt.Println("Error:", err)
-		fmt.Println("Usage: sslcheck [options] <host>")
+		fmt.Println("Usage: sslcheck [options] <hosts>")
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
 
-	tailArgs := flag.Args()
-	if len(tailArgs) != 1 {
-		fmt.Println("Usage: sslcheck [options] <host>")
+	hosts := flag.Args()
+	if len(hosts) == 0 {
+		fmt.Println("Usage: sslcheck [options] <hosts>")
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
 
-	host := tailArgs[0]
-
-	if err := scanner.ScanDomain(host, &scanParameters, rng); err != nil {
+	if err := scanner.ScanHosts(hosts, &scanParameters, rng); err != nil {
 		fmt.Println("[FATAL]", err)
 		os.Exit(1)
 	}
