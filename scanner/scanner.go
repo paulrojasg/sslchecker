@@ -214,7 +214,7 @@ func ScanHosts(hosts []string, parameters *domain.ScanParameters, rng *rand.Rand
 
 	startTime := time.Now()
 
-	failedHosts := []int{}
+	failedHosts := []string{}
 
 	globalError := ""
 
@@ -230,7 +230,7 @@ func ScanHosts(hosts []string, parameters *domain.ScanParameters, rng *rand.Rand
 		}
 		if err := scanHost(host, state); err != nil {
 			fmt.Printf("%s", err)
-			failedHosts = append(failedHosts, ind)
+			failedHosts = append(failedHosts, host)
 		}
 		if err := *state.globalError; err != "" {
 			if err == "retries_limit_reached" {
@@ -245,7 +245,7 @@ func ScanHosts(hosts []string, parameters *domain.ScanParameters, rng *rand.Rand
 		fmt.Println()
 		fmt.Println("Scan on the following hosts failed:")
 		for _, host := range failedHosts {
-			fmt.Printf(" - %s\n", hosts[host])
+			fmt.Printf(" - %s\n", host)
 		}
 		return fmt.Errorf("One or more scans failed")
 	}
