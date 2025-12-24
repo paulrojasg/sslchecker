@@ -9,16 +9,14 @@ import (
 	"strconv"
 )
 
-const defaultBaseURL = "https://api.ssllabs.com/api/v2/"
-
 type Client struct {
 	baseURL    string
 	httpClient *http.Client
 }
 
-func NewClient() *Client {
+func NewClient(baseUrl string) *Client {
 	return &Client{
-		baseURL:    defaultBaseURL,
+		baseURL:    baseUrl,
 		httpClient: http.DefaultClient,
 	}
 }

@@ -98,6 +98,13 @@ func main() {
 		"Disable randomized polling intervals (use fixed delays)",
 	)
 
+	flag.StringVar(
+		&scanParameters.BaseUrl,
+		"base-url",
+		"https://api.ssllabs.com/api/v2/",
+		"Scanning API's base url",
+	)
+
 	flag.Parse()
 
 	if err := validateParameters(&scanParameters); err != nil {

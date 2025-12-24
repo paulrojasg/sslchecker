@@ -184,7 +184,7 @@ func ScanHosts(hosts []string, parameters *domain.ScanParameters, rng *rand.Rand
 
 	verbose := parameters.Verbose
 
-	client := ssllabs.NewClient()
+	client := ssllabs.NewClient(parameters.BaseUrl)
 
 	var ctx context.Context
 	var cancelCtx context.CancelFunc

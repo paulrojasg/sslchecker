@@ -45,6 +45,7 @@ type ScanParameters struct {
 	Timeout        uint
 	Output         string
 	SteadyPolling  bool
+	BaseUrl        string
 }
 
 const (
