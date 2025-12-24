@@ -34,7 +34,7 @@ func WriteRawJSONFile(report *domain.HostReport, parameters *domain.ScanParamete
 	return nil
 }
 
-func PrintEndpointProgress(report domain.HostReport, parameters *domain.ScanParameters) {
+func PrintEndpointProgress(report *domain.HostReport, parameters *domain.ScanParameters) {
 	readyEndpoints := 0
 	for _, endpoint := range report.Endpoints {
 		if int(endpoint.Progress) == 100 {
@@ -89,7 +89,7 @@ func PrintEndpointProgress(report domain.HostReport, parameters *domain.ScanPara
 	}
 }
 
-func PrintHostSummary(report domain.HostReport, parameters *domain.ScanParameters) {
+func PrintHostSummary(report *domain.HostReport, parameters *domain.ScanParameters) {
 
 	fmt.Println("\n" + strings.Repeat("=", 60))
 	fmt.Println("FINAL ASSESSMENT SUMMARY")

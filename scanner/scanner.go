@@ -125,9 +125,9 @@ func scanHost(host string, state scanState) error {
 		tickerDelaySeconds = dnsDelay
 	case domain.StatusInProgress:
 		fmt.Printf("[INFO]   Detected %d endpoints\n", len(report.Endpoints))
-		formatter.PrintEndpointProgress(*report, parameters)
+		formatter.PrintEndpointProgress(report, parameters)
 	case domain.StatusReady:
-		formatter.PrintHostSummary(*report, parameters)
+		formatter.PrintHostSummary(report, parameters)
 		if parameters.Output != "" {
 			if err := formatter.WriteRawJSONFile(report, parameters); err != nil {
 				return fmt.Errorf("Error while writing into file: %s", err)
@@ -169,9 +169,9 @@ func scanHost(host string, state scanState) error {
 			switch reportStatus {
 			case domain.StatusDNS:
 			case domain.StatusInProgress:
-				formatter.PrintEndpointProgress(*report, parameters)
+				formatter.PrintEndpointProgress(report, parameters)
 			case domain.StatusReady:
-				formatter.PrintHostSummary(*report, parameters)
+				formatter.PrintHostSummary(report, parameters)
 				if parameters.Output != "" {
 					if err := formatter.WriteRawJSONFile(report, parameters); err != nil {
 						return fmt.Errorf("Error while writing into file: %s", err)
