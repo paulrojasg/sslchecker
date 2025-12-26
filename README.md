@@ -122,6 +122,16 @@ Same as previous sample log, plus:
 
 - Randomized polling helps prevent synchronized request bursts
 
+## Future Work
+
+### Parallel / Asynchronous Assessments
+
+Parallel assessment execution is implemented and under active refinement in the following branch: `feat-parallel-assessments`
+
+This work focuses on enabling concurrent scans while respecting SSL Labs API constraints and maintaining accurate progress reporting.
+
+Once edge cases around concurrency limits, retry coordination, and shared state handling are fully validated, the feature will be promoted to the stable release.
+
 ## License
 
 MIT License
