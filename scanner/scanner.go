@@ -279,7 +279,6 @@ func scanHost(host string, state scanState, logger *domain.AsyncLogger) error {
 	}
 }
 
-// TODO: Show maximum and current number of assessments in verbose mode
 func ScanHosts(hosts []string, parameters *domain.ScanParameters, rng *rand.Rand) error {
 
 	verbose := parameters.Verbose
