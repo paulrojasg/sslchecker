@@ -9,17 +9,89 @@ import (
 	"paulrojasg/sslchecker/domain"
 	"paulrojasg/sslchecker/formatter"
 	"paulrojasg/sslchecker/ssllabs"
+	"sync"
 	"time"
 )
 
 type scanState struct {
 	parameters *domain.ScanParameters
 	rng        *rand.Rand
-	ctx        context.Context
 	client     *ssllabs.Client
 	startTime  time.Time
 	scanIndex  int
+	controller *AssessmentController
 }
+type AssessmentController struct {
+	sem     chan struct{}
+	pauseCh chan struct{}
+	mu      sync.Mutex
+
+	ctx    context.Context
+	cancel context.CancelFunc
+}
+
+type Host struct {
+	host       string
+	raiseError bool
+}
+
+func NewAssessmentController(max int, ctx context.Context, cancel context.CancelFunc) *AssessmentController {
+
+	c := &AssessmentController{
+		sem:     make(chan struct{}, max),
+		pauseCh: make(chan struct{}),
+		ctx:     ctx,
+		cancel:  cancel,
+	}
+	close(c.pauseCh) // start unpaused
+	return c
+}
+
+func (c *AssessmentController) Kill() {
+	c.cancel() // cancel context
+	c.Resume() // unblock paused goroutines
+}
+
+func (c *AssessmentController) Pause() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	select {
+	case <-c.pauseCh:
+		c.pauseCh = make(chan struct{}) // RED LIGHT
+	default:
+	}
+}
+
+func (c *AssessmentController) Resume() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	select {
+	case <-c.pauseCh:
+		// already resumed
+	default:
+		close(c.pauseCh)
+	}
+}
+
+func (c *AssessmentController) Acquire(ctx context.Context) error {
+	select {
+	case c.sem <- struct{}{}:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (c *AssessmentController) Release() {
+	select {
+	case <-c.sem:
+	default:
+	}
+}
+
+var ErrTooManyRequests = errors.New("429 too many requests")
 
 var errMaxTriesExceeded = errors.New("Maximum retries limit reached when scanning one of the hosts\n")
 
@@ -37,14 +109,21 @@ func calculateTicker(baseDelay int, steadyPolling bool, rng *rand.Rand) time.Dur
 func analyzeWithRetry(
 	host string,
 	state scanState,
+	logger *domain.AsyncLogger,
 ) (*domain.HostReport, error) {
 	const maxRetries = 3
-	const delaySeconds = 30
+	const delaySeconds = 3
 	const retryDelay = delaySeconds * time.Second
 
-	ctx := state.ctx
+	ctx := state.controller.ctx
 	client := state.client
 	parameters := *state.parameters
+
+	select {
+	case <-state.controller.pauseCh:
+	case <-state.controller.ctx.Done():
+		return nil, fmt.Errorf("[!] Context cancelled")
+	}
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 
@@ -55,53 +134,59 @@ func analyzeWithRetry(
 			if errors.As(err, &apiErr) {
 				switch statusCode := apiErr.StatusCode; statusCode {
 				case http.StatusTooManyRequests:
-					fmt.Printf(
+					logger.Printf(host,
 						"[WARN]  Rate limit hit (429). Retrying in %s... (attempt %d/%d)\n",
 						retryDelay,
 						attempt,
 						maxRetries,
 					)
 
+					state.controller.Pause()
 					time.Sleep(retryDelay)
 
 				case 529:
-					fmt.Printf("[WARN]  API server overloaded (529). Retrying in %s... (attempt %d/%d)\n",
+					logger.Printf(host, "[WARN]  API server overloaded (529). Retrying in %s... (attempt %d/%d)\n",
 						retryDelay*2,
 						attempt,
 						maxRetries)
+					state.controller.Pause()
 					time.Sleep(retryDelay * 2)
 				default:
-					fmt.Printf("[WARN]  API server responded with unexpected status code (%d). Retrying in %s... (attempt %d/%d)\n", statusCode, retryDelay*2,
+					logger.Printf(host, "[WARN]  API server responded with unexpected status code (%d). Retrying in %s... (attempt %d/%d)\n", statusCode, retryDelay*2,
 						attempt,
 						maxRetries)
+					state.controller.Pause()
 					time.Sleep(retryDelay * 2)
 				}
 				continue
 			}
-			fmt.Printf("[!] Error: Failed to refresh data: %v", err)
+			logger.Printf(host, "[!] Error: Failed to refresh data: %v\n", err)
 			time.Sleep(retryDelay)
 		}
+		state.controller.Resume()
 		return report, err
 	}
+	state.controller.Kill()
 	return nil, errMaxTriesExceeded
 }
 
 func continueAnalyzeWIthRetry(
 	host string,
 	state scanState,
+	logger *domain.AsyncLogger,
 ) (*domain.HostReport, error) {
 
 	newParameters := *state.parameters
 	newParameters.New = false
 	state.parameters = &newParameters
-	return analyzeWithRetry(host, state)
+	return analyzeWithRetry(host, state, logger)
 }
 
-func scanHost(host string, state scanState) error {
+func scanHost(host string, state scanState, logger *domain.AsyncLogger) error {
 	dnsDelay := 5
 	postDnsDelay := 10
 
-	ctxObj := state.ctx
+	ctxObj := state.controller.ctx
 	startTime := state.startTime
 	rng := state.rng
 	parameters := state.parameters
@@ -109,7 +194,7 @@ func scanHost(host string, state scanState) error {
 
 	steadyPolling := parameters.SteadyPolling
 
-	report, err := analyzeWithRetry(host, state)
+	report, err := analyzeWithRetry(host, state, logger)
 	if err != nil {
 		return fmt.Errorf("Failed to initiate scan for %s: %w", host, err)
 	}
@@ -117,19 +202,19 @@ func scanHost(host string, state scanState) error {
 	tickerDelaySeconds := postDnsDelay
 	previousStatus := report.Status
 
-	fmt.Printf("\n>>> Target: %d (%s)\n", scanIndex, host)
-	fmt.Printf("[STATUS] %-12s (Initial Check)\n", previousStatus)
+	logger.Printf(host, ">>> Target: %d (%s)\n", scanIndex, host)
+	logger.Printf(host, "[STATUS] %-12s (Initial Check)\n", previousStatus)
 
 	switch previousStatus {
 	case domain.StatusDNS:
 		tickerDelaySeconds = dnsDelay
 	case domain.StatusInProgress:
-		fmt.Printf("[INFO]   Detected %d endpoints\n", len(report.Endpoints))
-		formatter.PrintEndpointProgress(report, parameters)
+		logger.Printf(host, "[INFO]   Detected %d endpoints\n", len(report.Endpoints))
+		formatter.PrintEndpointProgress(report, parameters, logger)
 	case domain.StatusReady:
-		formatter.PrintHostSummary(report, parameters)
+		formatter.PrintHostSummary(report, parameters, logger)
 		if parameters.Output != "" {
-			if err := formatter.WriteRawJSONFile(report, parameters); err != nil {
+			if err := formatter.WriteRawJSONFile(report, parameters, logger); err != nil {
 				return fmt.Errorf("Error while writing into file: %s", err)
 			}
 		}
@@ -145,10 +230,16 @@ func scanHost(host string, state scanState) error {
 
 	for {
 		select {
+		case <-state.controller.pauseCh:
+		case <-ctxObj.Done():
+			return fmt.Errorf("[!] Context cancelled")
+		}
+
+		select {
 		case <-ctxObj.Done():
 			return fmt.Errorf("[!] TIMEOUT: Global time limit reached.")
 		case <-ticker.C:
-			report, err := continueAnalyzeWIthRetry(host, state)
+			report, err := continueAnalyzeWIthRetry(host, state, logger)
 			if err != nil {
 				return fmt.Errorf("Failed to initiate scan for %s: %w", host, err)
 			}
@@ -156,12 +247,12 @@ func scanHost(host string, state scanState) error {
 			reportStatus := report.Status
 			elapsed := time.Since(startTime).Truncate(time.Second)
 
-			fmt.Printf("\n[STATUS] %-12s | Elapsed: %s", reportStatus, elapsed)
+			logger.Printf(host, "[STATUS] %-12s | Elapsed: %s\n", reportStatus, elapsed)
 
 			if reportStatus != previousStatus {
 				if reportStatus == domain.StatusInProgress {
 					tickerDelaySeconds = postDnsDelay
-					fmt.Printf("\n[INFO]   Endpoints found: %d", len(report.Endpoints))
+					logger.Printf(host, "[INFO]   Endpoints found: %d\n", len(report.Endpoints))
 				}
 				previousStatus = reportStatus
 			}
@@ -169,11 +260,11 @@ func scanHost(host string, state scanState) error {
 			switch reportStatus {
 			case domain.StatusDNS:
 			case domain.StatusInProgress:
-				formatter.PrintEndpointProgress(report, parameters)
+				formatter.PrintEndpointProgress(report, parameters, logger)
 			case domain.StatusReady:
-				formatter.PrintHostSummary(report, parameters)
+				formatter.PrintHostSummary(report, parameters, logger)
 				if parameters.Output != "" {
-					if err := formatter.WriteRawJSONFile(report, parameters); err != nil {
+					if err := formatter.WriteRawJSONFile(report, parameters, logger); err != nil {
 						return fmt.Errorf("Error while writing into file: %s", err)
 					}
 				}
@@ -192,6 +283,7 @@ func scanHost(host string, state scanState) error {
 func ScanHosts(hosts []string, parameters *domain.ScanParameters, rng *rand.Rand) error {
 
 	verbose := parameters.Verbose
+	parallel := parameters.Parallel
 
 	client := ssllabs.NewClient(parameters.BaseUrl)
 
@@ -214,33 +306,64 @@ func ScanHosts(hosts []string, parameters *domain.ScanParameters, rng *rand.Rand
 
 	startTime := time.Now()
 
-	failedHosts := []string{}
+	var maxParallel int
+
+	if parallel {
+		if parameters.MaxParallel == 0 {
+			maxParallel = len(hosts)
+		} else {
+			maxParallel = int(parameters.MaxParallel)
+		}
+	} else {
+		maxParallel = 1
+	}
+
+	controller := NewAssessmentController(maxParallel, ctx, cancelCtx)
+	logger := domain.NewAsyncLogger(100)
+	var wg sync.WaitGroup
+
+	errCh := make(chan error, len(hosts))
 
 	for ind, host := range hosts {
-		state := scanState{
-			parameters: parameters,
-			rng:        rng,
-			ctx:        ctx,
-			client:     client,
-			startTime:  startTime,
-			scanIndex:  ind + 1,
-		}
-		if err := scanHost(host, state); err != nil {
-			failedHosts = append(failedHosts, host)
-			if errors.Is(err, errMaxTriesExceeded) {
-				return fmt.Errorf("%w", err)
-			} else {
-				return fmt.Errorf("Unknown error was found")
+		wg.Add(1)
+		go func(host string) {
+			defer wg.Done()
+
+			if err := controller.Acquire(controller.ctx); err != nil {
+				return
 			}
+			defer controller.Release()
+
+			select {
+			case <-controller.pauseCh:
+			case <-controller.ctx.Done():
+				return
+			}
+			state := scanState{
+				parameters: parameters,
+				rng:        rng,
+				controller: controller,
+				client:     client,
+				startTime:  startTime,
+				scanIndex:  ind + 1,
+			}
+			if err := scanHost(host, state, logger); err != nil {
+				errCh <- err
+				if errors.Is(err, errMaxTriesExceeded) {
+					controller.Kill()
+				}
+			}
+		}(host)
+		if parallel {
+			time.Sleep(3 * time.Second)
 		}
 	}
-	if len(failedHosts) > 0 {
-		fmt.Println()
-		fmt.Println("Scan on the following hosts failed:")
-		for _, host := range failedHosts {
-			fmt.Printf(" - %s\n", host)
-		}
-		return fmt.Errorf("One or more scans failed")
+	wg.Wait()
+	logger.Close()
+	close(errCh)
+	if len(errCh) > 0 {
+		err := <-errCh
+		fmt.Printf("%s\n", err)
 	}
 	return nil
 }

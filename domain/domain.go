@@ -1,6 +1,9 @@
 package domain
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+)
 
 type AssessmentStatus string
 
@@ -47,6 +50,84 @@ type ScanParameters struct {
 	SteadyPolling  bool
 	BaseUrl        string
 	HostsFile      string
+	Parallel       bool
+	MaxParallel    uint
+}
+
+type AsyncLogger struct {
+	logChan chan string
+	mu      sync.Mutex
+	wg      sync.WaitGroup
+}
+
+type LogSession struct {
+	logger *AsyncLogger
+	host   string
+}
+
+func (l *AsyncLogger) Begin(host string) *LogSession {
+	l.mu.Lock()
+	return &LogSession{
+		logger: l,
+		host:   host,
+	}
+}
+
+func (s *LogSession) End() {
+	s.logger.mu.Unlock()
+}
+
+func (s *LogSession) Printf(format string, a ...any) {
+	s.logger.logChan <- fmt.Sprintf(
+		"[ %s ] | %s",
+		s.host,
+		fmt.Sprintf(format, a...),
+	)
+}
+
+func (s *LogSession) Println(a ...any) {
+	s.logger.logChan <- fmt.Sprintf(
+		"[ %s ] | %s",
+		s.host,
+		fmt.Sprintln(a...),
+	)
+}
+
+func (l *AsyncLogger) Close() {
+	close(l.logChan)
+	l.wg.Wait()
+}
+
+func (l *AsyncLogger) Printf(host, format string, a ...any) {
+	l.logChan <- fmt.Sprintf(
+		"[ %s ] | %s",
+		host,
+		fmt.Sprintf(format, a...),
+	)
+}
+
+func (l *AsyncLogger) Println(host string, a ...any) {
+	l.logChan <- fmt.Sprintf(
+		"[ %s ] | %s",
+		host,
+		fmt.Sprintln(a...),
+	)
+}
+
+func NewAsyncLogger(bufferSize int) *AsyncLogger {
+	l := &AsyncLogger{
+		logChan: make(chan string, bufferSize),
+	}
+
+	l.wg.Add(1)
+	go func() {
+		defer l.wg.Done()
+		for msg := range l.logChan {
+			fmt.Print(msg)
+		}
+	}()
+
+	return l
 }
 
 const (

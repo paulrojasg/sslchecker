@@ -49,6 +49,9 @@ func validateParameters(parameters *domain.ScanParameters) error {
 	if parameters.MaxAge != 0 && !parameters.Cache {
 		return fmt.Errorf("'max-age' option must be used along 'cache' option")
 	}
+	if parameters.MaxParallel != 0 && !parameters.Parallel {
+		return fmt.Errorf("'max-parallel' option must be used along 'parallel' option")
+	}
 	return nil
 }
 
@@ -139,6 +142,20 @@ func main() {
 		"hosts-file",
 		"",
 		"File path to a host list for scanning. May be combined with hosts supplied as tail arguments.",
+	)
+
+	flag.BoolVar(
+		&scanParameters.Parallel,
+		"parallel",
+		false,
+		"Run assessments in parallel.",
+	)
+
+	flag.UintVar(
+		&scanParameters.MaxParallel,
+		"max-parallel",
+		0,
+		"Maximum number of concurrent assessments when used with --parallel.",
 	)
 
 	flag.Parse()
