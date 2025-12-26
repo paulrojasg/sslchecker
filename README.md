@@ -1,0 +1,127 @@
+# SSLCHECK
+
+A command-line tool to analyze SSL/TLS configurations using the SSL Labs API, with handling for long-running scans and polling strategies.
+
+## Overview
+
+SSLCHECK is a CLI tool that performs SSL/TLS assessments for one or more hosts by querying the SSL Labs API.
+It is designed to be safe, polite to the API, and transparent about scan progress.
+
+The tool supports:
+
+- **Long-running scans** with automated state management.
+- **Retry and backoff** strategies for API errors.
+- **Randomized polling intervals** to avoid synchronized requests.
+- **Sequential multi-host scanning**.
+- **Saving raw API responses** for local analysis.
+- **Fine-grained control** over assessment parameters.
+
+---
+
+## Features
+
+- ✅ **Multi-host Support:** Scan one or multiple hosts sequentially.
+- ✅ **Error Handling:** Graceful handling of API errors (429, 529, retries, timeouts).
+- ✅ **Smart Polling:** Randomized polling intervals to stay under the radar.
+- ✅ **Steady Mode:** Optional steady polling mode for predictable intervals.
+- ✅ **Transparency:** Concise or verbose progress reporting.
+- ✅ **Data Export:** Save raw API JSON responses to a file.
+- ✅ **API Compliance:** Respects SSL Labs API constraints and recommendations.
+- ✅ **Global Timeout:** Configurable safety net for long sessions.
+
+---
+
+## Installation
+
+### From source
+
+```bash
+git clone [https://github.com/yourusername/sslcheck.git](https://github.com/yourusername/sslcheck.git)
+cd sslcheck
+go build -o sslcheck
+```
+
+## Usage
+
+```bash
+sslcheck [options] <host> [host2 host3 ...]
+```
+
+### Examples:
+
+```bash
+sslcheck ssllabs.com
+sslcheck --verbose ssllabs.com
+sslcheck --all on ssllabs.com
+sslcheck --output result.json ssllabs.com
+sslcheck --steady-polling ssllabs.com
+sslcheck --timeout 600 ssllabs.com
+```
+
+## Command-line options
+
+Print help information
+
+```bash
+sslcheck -h
+```
+
+### Output & verbosity
+
+| Flag              | Description                                             |
+| ----------------- | ------------------------------------------------------- |
+| `--verbose`       | Enable verbose output (more progress details, metadata) |
+| `--output <file>` | Save the raw API JSON response to a file                |
+
+### Assessment behavior
+
+| Flag                | Description                                              |
+| ------------------- | -------------------------------------------------------- |
+| `--new`             | Ignore cached results and start a new assessment         |
+| `--cache`           | Retrieve cached results only                             |
+| `--max-age <hours>` | Maximum cache age (requires `--cache`)                   |
+| `--all on`          | Return full endpoint information                         |
+| `--all done`        | Return full information only when assessment is complete |
+| `--publish`         | Publish results on SSL Labs public boards                |
+| `--ignore-mismatch` | Proceed even if certificate hostname mismatch            |
+
+### Polling & timing
+
+| Flag                  | Description                                             |
+| --------------------- | ------------------------------------------------------- |
+| `--timeout <seconds>` | Global timeout for all assessments (0 disables timeout) |
+| `--steady-polling`    | Disable polling randomization (fixed intervals)         |
+
+By default, polling intervals are randomized (~20%) on top of SSL Labs recommended delays.
+
+### Progress output
+
+#### Non-verbose mode sample log
+
+```bash
+[12:41:03] ASSESSMENT PROGRESS: 1/3 COMPLETE
+```
+
+#### Verbose mode
+
+Same as previous sample log, plus:
+
+- Per-endpoint progress
+
+- Status details
+
+- Additional diagnostic information
+
+## API usage notes
+
+- The tool respects SSL Labs API rate limits and concurrency rules
+
+- 429 (Too Many Requests) and 529 (Server overloaded) are handled with retries and backoff
+
+- Polling intervals follow SSL Labs recommendations
+
+- Randomized polling helps prevent synchronized request bursts
+
+## License
+
+MIT License
