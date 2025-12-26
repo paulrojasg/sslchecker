@@ -2,72 +2,166 @@ package scanner
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"math/rand"
+	"net/http"
 	"paulrojasg/sslchecker/domain"
 	"paulrojasg/sslchecker/formatter"
 	"paulrojasg/sslchecker/ssllabs"
 	"time"
 )
 
-func ScanDomain(host string) {
+type scanState struct {
+	parameters *domain.ScanParameters
+	rng        *rand.Rand
+	ctx        context.Context
+	client     *ssllabs.Client
+	startTime  time.Time
+	scanIndex  int
+}
 
-	client := ssllabs.NewClient()
+var errMaxTriesExceeded = errors.New("Maximum retries limit reached when scanning one of the hosts\n")
 
-	ctx, cancelCtxTimeout := context.WithTimeout(context.Background(), 5*time.Minute)
+func calculateTicker(baseDelay int, steadyPolling bool, rng *rand.Rand) time.Duration {
+	delay := time.Duration(baseDelay) * time.Second
 
-	defer cancelCtxTimeout()
-
-	startTime := time.Now()
-
-	report, err := client.Analyze(ctx, host, false)
-	if err != nil {
-		fmt.Println("An error has ocurred scanning the site")
+	if !steadyPolling {
+		jitterSeconds := rng.Intn((baseDelay*20)/100) + 1
+		delay += time.Duration(jitterSeconds) * time.Second
 	}
 
-	tickerDelaySeconds := 10 * time.Second
+	return delay
+}
+
+func analyzeWithRetry(
+	host string,
+	state scanState,
+) (*domain.HostReport, error) {
+	const maxRetries = 3
+	const delaySeconds = 30
+	const retryDelay = delaySeconds * time.Second
+
+	ctx := state.ctx
+	client := state.client
+	parameters := *state.parameters
+
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+
+		report, err := client.Analyze(ctx, host, parameters)
+		if err != nil {
+			var apiErr *domain.APIError
+
+			if errors.As(err, &apiErr) {
+				switch statusCode := apiErr.StatusCode; statusCode {
+				case http.StatusTooManyRequests:
+					fmt.Printf(
+						"[WARN]  Rate limit hit (429). Retrying in %s... (attempt %d/%d)\n",
+						retryDelay,
+						attempt,
+						maxRetries,
+					)
+
+					time.Sleep(retryDelay)
+
+				case 529:
+					fmt.Printf("[WARN]  API server overloaded (529). Retrying in %s... (attempt %d/%d)\n",
+						retryDelay*2,
+						attempt,
+						maxRetries)
+					time.Sleep(retryDelay * 2)
+				default:
+					fmt.Printf("[WARN]  API server responded with unexpected status code (%d). Retrying in %s... (attempt %d/%d)\n", statusCode, retryDelay*2,
+						attempt,
+						maxRetries)
+					time.Sleep(retryDelay * 2)
+				}
+				continue
+			}
+			fmt.Printf("[!] Error: Failed to refresh data: %v", err)
+			time.Sleep(retryDelay)
+		}
+		return report, err
+	}
+	return nil, errMaxTriesExceeded
+}
+
+func continueAnalyzeWIthRetry(
+	host string,
+	state scanState,
+) (*domain.HostReport, error) {
+
+	newParameters := *state.parameters
+	newParameters.New = false
+	state.parameters = &newParameters
+	return analyzeWithRetry(host, state)
+}
+
+func scanHost(host string, state scanState) error {
+	dnsDelay := 5
+	postDnsDelay := 10
+
+	ctxObj := state.ctx
+	startTime := state.startTime
+	rng := state.rng
+	parameters := state.parameters
+	scanIndex := state.scanIndex
+
+	steadyPolling := parameters.SteadyPolling
+
+	report, err := analyzeWithRetry(host, state)
+	if err != nil {
+		return fmt.Errorf("Failed to initiate scan for %s: %w", host, err)
+	}
+
+	tickerDelaySeconds := postDnsDelay
 	previousStatus := report.Status
 
-	fmt.Println("Initial assessment status for ", host, ": ", previousStatus)
+	fmt.Printf("\n>>> Target: %d (%s)\n", scanIndex, host)
+	fmt.Printf("[STATUS] %-12s (Initial Check)\n", previousStatus)
 
 	switch previousStatus {
 	case domain.StatusDNS:
-		tickerDelaySeconds = 5 * time.Second
+		tickerDelaySeconds = dnsDelay
 	case domain.StatusInProgress:
-		fmt.Printf("%d endpoints found for %s\n", len(report.Endpoints), host)
+		fmt.Printf("[INFO]   Detected %d endpoints\n", len(report.Endpoints))
+		formatter.PrintEndpointProgress(*report, parameters)
 	case domain.StatusReady:
-		formatter.PrintHostSummary(*report)
-		return
+		formatter.PrintHostSummary(*report, parameters)
+		if parameters.Output != "" {
+			if err := formatter.WriteRawJSONFile(report, parameters); err != nil {
+				return fmt.Errorf("Error while writing into file: %s", err)
+			}
+		}
+		return nil
 	case domain.StatusError:
-		fmt.Println(report.StatusMessage)
-		return
+		return fmt.Errorf("%s\n", report.StatusMessage)
 	default:
-		fmt.Println("Unknown status error ", previousStatus)
-		return
+		return fmt.Errorf("Unexpected status: %s\n", previousStatus)
 	}
 
-	ticker := time.NewTicker(tickerDelaySeconds)
-
+	ticker := time.NewTicker(calculateTicker(tickerDelaySeconds, steadyPolling, rng))
 	defer ticker.Stop()
 
 	for {
 		select {
-		case <-ctx.Done():
-			fmt.Println("Total time limit reached. Exiting.")
-			return
+		case <-ctxObj.Done():
+			return fmt.Errorf("[!] TIMEOUT: Global time limit reached.")
 		case <-ticker.C:
-			report, err := client.Analyze(ctx, host, false)
+			report, err := continueAnalyzeWIthRetry(host, state)
 			if err != nil {
-				fmt.Println("An error has ocurred scanning the site")
+				return fmt.Errorf("Failed to initiate scan for %s: %w", host, err)
 			}
 
 			reportStatus := report.Status
+			elapsed := time.Since(startTime).Truncate(time.Second)
 
-			fmt.Printf("Assessment status for %s: (%s) - (%s)\n", host, reportStatus, time.Since(startTime).Truncate(time.Second))
+			fmt.Printf("\n[STATUS] %-12s | Elapsed: %s", reportStatus, elapsed)
 
 			if reportStatus != previousStatus {
 				if reportStatus == domain.StatusInProgress {
-					ticker.Reset(10 * time.Second)
-					fmt.Printf("%d endpoints found for %s\n", len(report.Endpoints), host)
+					tickerDelaySeconds = postDnsDelay
+					fmt.Printf("\n[INFO]   Endpoints found: %d", len(report.Endpoints))
 				}
 				previousStatus = reportStatus
 			}
@@ -75,17 +169,78 @@ func ScanDomain(host string) {
 			switch reportStatus {
 			case domain.StatusDNS:
 			case domain.StatusInProgress:
+				formatter.PrintEndpointProgress(*report, parameters)
 			case domain.StatusReady:
-				formatter.PrintHostSummary(*report)
-				return
+				formatter.PrintHostSummary(*report, parameters)
+				if parameters.Output != "" {
+					if err := formatter.WriteRawJSONFile(report, parameters); err != nil {
+						return fmt.Errorf("Error while writing into file: %s", err)
+					}
+				}
+				return nil
 			case domain.StatusError:
-				fmt.Println(report.StatusMessage)
-				return
+				return fmt.Errorf("%s", report.StatusMessage)
 			default:
-				fmt.Println("Unknown status error ", previousStatus)
-				return
+				return fmt.Errorf("Unexpected status: %s", reportStatus)
 			}
-
+			ticker.Reset(calculateTicker(tickerDelaySeconds, steadyPolling, rng))
 		}
 	}
+}
+
+// TODO: Show maximum and current number of assessments in verbose mode
+func ScanHosts(hosts []string, parameters *domain.ScanParameters, rng *rand.Rand) error {
+
+	verbose := parameters.Verbose
+
+	client := ssllabs.NewClient(parameters.BaseUrl)
+
+	var ctx context.Context
+	var cancelCtx context.CancelFunc
+	if parameters.Timeout > 0 {
+		timeoutLimit := time.Duration(parameters.Timeout) * time.Second
+		ctx, cancelCtx = context.WithTimeout(context.Background(), timeoutLimit)
+		if verbose {
+			fmt.Printf("[INFO] Global timeout: %s\n", timeoutLimit)
+		}
+	} else {
+		ctx, cancelCtx = context.WithCancel(context.Background())
+		if verbose {
+			fmt.Printf("[INFO] Global timeout disabled\n")
+		}
+	}
+
+	defer cancelCtx()
+
+	startTime := time.Now()
+
+	failedHosts := []string{}
+
+	for ind, host := range hosts {
+		state := scanState{
+			parameters: parameters,
+			rng:        rng,
+			ctx:        ctx,
+			client:     client,
+			startTime:  startTime,
+			scanIndex:  ind + 1,
+		}
+		if err := scanHost(host, state); err != nil {
+			failedHosts = append(failedHosts, host)
+			if errors.Is(err, errMaxTriesExceeded) {
+				return fmt.Errorf("%w", err)
+			} else {
+				return fmt.Errorf("Unknown error was found")
+			}
+		}
+	}
+	if len(failedHosts) > 0 {
+		fmt.Println()
+		fmt.Println("Scan on the following hosts failed:")
+		for _, host := range failedHosts {
+			fmt.Printf(" - %s\n", host)
+		}
+		return fmt.Errorf("One or more scans failed")
+	}
+	return nil
 }
