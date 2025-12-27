@@ -89,7 +89,7 @@ func main() {
 		&scanParameters.All,
 		"all",
 		"",
-		"Control amount of data returned by the API: 'on' for full data, 'done' for full data only when assessment completes",
+		"Control amount of data returned by the API: 'on' for full data, 'done' for full data only when assessment completes. Use --output to save detailed data into a file",
 	)
 
 	flag.BoolVar(
