@@ -21,6 +21,7 @@ type scanState struct {
 	scanIndex  int
 }
 
+var errGlobalTimeout = errors.New("[!] TIMEOUT: Global time limit reached\n")
 var errMaxTriesExceeded = errors.New("Maximum retries limit reached when scanning one of the hosts\n")
 
 // Calculate a random tip of ~20% of the base delay to add after every hit to the API
@@ -150,7 +151,7 @@ func scanHost(host string, state scanState) error {
 	for {
 		select {
 		case <-ctxObj.Done():
-			return fmt.Errorf("[!] TIMEOUT: Global time limit reached.")
+			return errGlobalTimeout
 		case <-ticker.C:
 			report, err := continueAnalyzeWithRetry(host, state)
 			if err != nil {
@@ -231,7 +232,7 @@ func ScanHosts(hosts []string, parameters *domain.ScanParameters, rng *rand.Rand
 		}
 		if err := scanHost(host, state); err != nil {
 			failedHosts = append(failedHosts, host)
-			if errors.Is(err, errMaxTriesExceeded) {
+			if errors.Is(err, errMaxTriesExceeded) || errors.Is(err, errGlobalTimeout) {
 				return fmt.Errorf("%w", err)
 			} else {
 				fmt.Printf("Scan failed on host %s", err)
