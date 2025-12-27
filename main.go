@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+const currentVersion = "1.0.0"
+
 func readFile(path string) ([]string, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -141,7 +143,19 @@ func main() {
 		"File path to a host list for scanning. May be combined with hosts supplied as tail arguments",
 	)
 
+	flag.BoolVar(
+		&scanParameters.ShowVersion,
+		"version",
+		false,
+		"Print version of sslchecker",
+	)
+
 	flag.Parse()
+
+	if scanParameters.ShowVersion {
+		fmt.Printf("sslchecker version %s\n", currentVersion)
+		os.Exit(0)
+	}
 
 	if err := validateParameters(&scanParameters); err != nil {
 		fmt.Println("Error:", err)

@@ -110,6 +110,13 @@ sslchecker -h
 | `--timeout <seconds>` | Global timeout for all assessments (0 disables timeout) |
 | `--steady-polling`    | Disable polling randomization (fixed intervals)         |
 
+### Extra & info
+
+| Flag        | Description                 |
+| ----------- | --------------------------- |
+| `--help`    | Print help info             |
+| `--version` | Print version of sslchecker |
+
 By default, polling intervals are randomized (~20%) on top of SSL Labs recommended delays.
 
 ### Progress output
