@@ -138,7 +138,7 @@ func main() {
 		&scanParameters.HostsFile,
 		"hosts-file",
 		"",
-		"File path to a host list for scanning. May be combined with hosts supplied as tail arguments.",
+		"File path to a host list for scanning. May be combined with hosts supplied as tail arguments",
 	)
 
 	flag.Parse()
