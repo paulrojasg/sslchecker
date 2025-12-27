@@ -81,10 +81,10 @@ sslchecker -h
 
 ### Output & verbosity
 
-| Flag              | Description                                             |
-| ----------------- | ------------------------------------------------------- |
-| `--verbose`       | Enable verbose output (more progress details, metadata) |
-| `--output <file>` | Save the raw API JSON response to a file (NDJSON)       |
+| Flag              | Description                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------------- |
+| `--verbose`       | Enable verbose output (more progress details, metadata)                                     |
+| `--output <file>` | Save the raw API JSON response to a file (NDJSON, one JSON object per completed assessment) |
 
 ### Assessment behavior
 
