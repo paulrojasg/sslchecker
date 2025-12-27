@@ -140,9 +140,9 @@ Same as previous sample log, plus:
 
 ### Parallel / Asynchronous Assessments
 
-Parallel assessment execution is implemented and under active refinement in the following branch: `feat-parallel-assessments`
+Parallel assessment execution is implemented and under active refinement in the following branch: `feat-parallel-assessments`.
 
-This work focuses on enabling concurrent scans while respecting SSL Labs API constraints and maintaining accurate progress reporting.
+This work focuses on enabling concurrent scans while respecting SSL Labs API constraints and maintaining accurate progress reporting. It adds two new options: `--parallel` to enable parallel mode and `--max-parallel` to specify the maximum number of assessments running at the same time.
 
 Once edge cases around concurrency limits, retry coordination, and shared state handling are fully validated, the feature will be promoted to the stable release.
 
