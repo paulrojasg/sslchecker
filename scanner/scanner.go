@@ -234,7 +234,7 @@ func ScanHosts(hosts []string, parameters *domain.ScanParameters, rng *rand.Rand
 			if errors.Is(err, errMaxTriesExceeded) {
 				return fmt.Errorf("%w", err)
 			} else {
-				return fmt.Errorf("Unknown error was found")
+				fmt.Printf("Scan failed on host %s", err)
 			}
 		}
 	}
