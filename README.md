@@ -71,7 +71,7 @@ sslcheck -h
 | Flag              | Description                                             |
 | ----------------- | ------------------------------------------------------- |
 | `--verbose`       | Enable verbose output (more progress details, metadata) |
-| `--output <file>` | Save the raw API JSON response to a file                |
+| `--output <file>` | Save the raw API JSON response to a file (NDJSON)       |
 
 ### Assessment behavior
 
