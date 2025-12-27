@@ -108,7 +108,7 @@ By default, polling intervals are randomized (~20%) on top of SSL Labs recommend
 #### Non-verbose mode sample log
 
 ```bash
-[12:41:03] ASSESSMENT PROGRESS: 1/3 COMPLETE
+[ ssllabs.com ] | [12:41:03] ASSESSMENT PROGRESS: 1/3 COMPLETE
 ```
 
 #### Verbose mode
