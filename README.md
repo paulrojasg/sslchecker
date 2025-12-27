@@ -35,7 +35,7 @@ The tool supports:
 
 ### Requirements
 
-Go 1.21 or newer
+Go 1.25.4 or newer
 
 ### From source
 
