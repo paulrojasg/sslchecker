@@ -33,6 +33,10 @@ The tool supports:
 
 ## Installation
 
+### Requirements
+
+Go 1.21 or newer
+
 ### From source
 
 ```bash
