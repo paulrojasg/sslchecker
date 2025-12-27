@@ -66,6 +66,12 @@ Print help information
 sslcheck -h
 ```
 
+### Input
+
+| Flag           | Description                                                                                  |
+| -------------- | -------------------------------------------------------------------------------------------- |
+| `--hosts-file` | File path to a host list for scanning. May be combined with hosts supplied as tail arguments |
+
 ### Output & verbosity
 
 | Flag              | Description                                             |
@@ -75,17 +81,18 @@ sslcheck -h
 
 ### Assessment behavior
 
-| Flag                | Description                                                        |
-| ------------------- | ------------------------------------------------------------------ |
-| `--new`             | Ignore cached results and start a new assessment                   |
-| `--cache`           | Retrieve cached results only                                       |
-| `--max-age <hours>` | Maximum cache age (requires `--cache`)                             |
-| `--all on`          | Return full endpoint information                                   |
-| `--all done`        | Return full information only when assessment is complete           |
-| `--publish`         | Publish results on SSL Labs public boards                          |
-| `--ignore-mismatch` | Proceed even if certificate hostname mismatch                      |
-| `--parallel`        | Run assessments in parallel                                        |
-| `--max-parallel`    | Maximum number of concurrent assessments when used with --parallel |
+| Flag                | Description                                                         |
+| ------------------- | ------------------------------------------------------------------- |
+| `--new`             | Ignore cached results and start a new assessment                    |
+| `--cache`           | Retrieve cached results only                                        |
+| `--max-age <hours>` | Maximum cache age (requires `--cache`)                              |
+| `--all on`          | Return full endpoint information                                    |
+| `--all done`        | Return full information only when assessment is complete            |
+| `--publish`         | Publish results on SSL Labs public boards                           |
+| `--ignore-mismatch` | Proceed even if certificate hostname mismatch                       |
+| `--base-url`        | Scanning API's base url (default "https://api.ssllabs.com/api/v2/") |
+| `--parallel`        | Run assessments in parallel                                         |
+| `--max-parallel`    | Maximum number of concurrent assessments when used with --parallel  |
 
 ### Polling & timing
 
