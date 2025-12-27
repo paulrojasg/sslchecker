@@ -36,9 +36,9 @@ The tool supports:
 ### From source
 
 ```bash
-git clone [https://github.com/paulrojasg/sslchecker.git](https://github.com/paulrojasg/sslchecker.git)
-cd sslcheck
-go build -o sslcheck
+git clone https://github.com/paulrojasg/sslchecker.git
+cd sslchecker
+go build -o sslchecker
 ```
 
 ## Usage
