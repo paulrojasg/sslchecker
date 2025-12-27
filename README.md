@@ -1,6 +1,6 @@
 # SSLCHECKER
 
-A command-line tool to analyze SSL/TLS configurations using the SSL Labs API, with handling for long-running scans and polling strategies.
+A command-line tool to analyze SSL/TLS configurations using the SSL Labs API, with support for long-running scans and configurable polling strategies.
 
 ## Overview
 
@@ -118,7 +118,7 @@ By default, polling intervals are randomized (~20%) on top of SSL Labs recommend
 
 #### Verbose mode
 
-Same as previous sample log, plus:
+Includes the non-verbose output, plus:
 
 - Per-endpoint progress
 
