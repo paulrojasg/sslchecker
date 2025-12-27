@@ -89,7 +89,7 @@ func analyzeWithRetry(
 }
 
 // Analyze host one time using API - retrying if it's required and with --new = false
-func continueAnalyzeWIthRetry(
+func continueAnalyzeWithRetry(
 	host string,
 	state scanState,
 ) (*domain.HostReport, error) {
@@ -152,7 +152,7 @@ func scanHost(host string, state scanState) error {
 		case <-ctxObj.Done():
 			return fmt.Errorf("[!] TIMEOUT: Global time limit reached.")
 		case <-ticker.C:
-			report, err := continueAnalyzeWIthRetry(host, state)
+			report, err := continueAnalyzeWithRetry(host, state)
 			if err != nil {
 				return fmt.Errorf("Failed to initiate scan for %s: %w", host, err)
 			}
