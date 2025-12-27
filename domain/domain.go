@@ -35,6 +35,7 @@ type HostReport struct {
 }
 
 type ScanParameters struct {
+	ShowVersion    bool
 	Verbose        bool
 	New            bool
 	Cache          bool

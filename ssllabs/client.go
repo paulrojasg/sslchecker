@@ -21,6 +21,7 @@ func NewClient(baseUrl string) *Client {
 	}
 }
 
+// Send a single analyze request to the API
 func (c *Client) Analyze(ctx context.Context, host string, parameters domain.ScanParameters) (*domain.HostReport, error) {
 	req, err := http.NewRequestWithContext(ctx,
 		"GET",

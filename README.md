@@ -1,10 +1,10 @@
-# SSLCHECK
+# SSLCHECKER
 
-A command-line tool to analyze SSL/TLS configurations using the SSL Labs API, with handling for long-running scans and polling strategies.
+A command-line tool to analyze SSL/TLS configurations using the SSL Labs API, with support for long-running scans and configurable polling strategies.
 
 ## Overview
 
-SSLCHECK is a CLI tool that performs SSL/TLS assessments for one or more hosts by querying the SSL Labs API.
+SSLCHECKER is a CLI tool that performs SSL/TLS assessments for one or more hosts by querying the SSL Labs API.
 It is designed to be safe, polite to the API, and transparent about scan progress.
 
 The tool supports:
@@ -33,29 +33,40 @@ The tool supports:
 
 ## Installation
 
+### Requirements
+
+Go 1.25.4 or newer
+
 ### From source
 
 ```bash
-git clone [https://github.com/yourusername/sslcheck.git](https://github.com/yourusername/sslcheck.git)
-cd sslcheck
-go build -o sslcheck
+git clone https://github.com/paulrojasg/sslchecker.git
+cd sslchecker
+go build -o sslchecker
 ```
 
 ## Usage
 
 ```bash
-sslcheck [options] <host> [host2 host3 ...]
+sslchecker [options] <host> [host2 host3 ...]
+```
+
+> [NOTE]
+> Depending on the operating system's settings prepending "./" to the executable may be needed to use the tool:
+
+```bash
+./sslchecker host
 ```
 
 ### Examples:
 
 ```bash
-sslcheck ssllabs.com
-sslcheck --verbose ssllabs.com
-sslcheck --all on ssllabs.com
-sslcheck --output result.json ssllabs.com
-sslcheck --steady-polling ssllabs.com
-sslcheck --timeout 600 ssllabs.com
+sslchecker ssllabs.com
+sslchecker --verbose ssllabs.com
+sslchecker --all on ssllabs.com
+sslchecker --output result.json ssllabs.com
+sslchecker --steady-polling ssllabs.com
+sslchecker --timeout 600 ssllabs.com
 ```
 
 ## Command-line options
@@ -63,27 +74,34 @@ sslcheck --timeout 600 ssllabs.com
 Print help information
 
 ```bash
-sslcheck -h
+sslchecker -h
 ```
+
+### Input
+
+| Flag           | Description                                                                                  |
+| -------------- | -------------------------------------------------------------------------------------------- |
+| `--hosts-file` | File path to a host list for scanning. May be combined with hosts supplied as tail arguments |
 
 ### Output & verbosity
 
-| Flag              | Description                                             |
-| ----------------- | ------------------------------------------------------- |
-| `--verbose`       | Enable verbose output (more progress details, metadata) |
-| `--output <file>` | Save the raw API JSON response to a file (NDJSON)       |
+| Flag              | Description                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------------- |
+| `--verbose`       | Enable verbose output (more progress details, metadata)                                     |
+| `--output <file>` | Save the raw API JSON response to a file (NDJSON, one JSON object per completed assessment) |
 
 ### Assessment behavior
 
-| Flag                | Description                                              |
-| ------------------- | -------------------------------------------------------- |
-| `--new`             | Ignore cached results and start a new assessment         |
-| `--cache`           | Retrieve cached results only                             |
-| `--max-age <hours>` | Maximum cache age (requires `--cache`)                   |
-| `--all on`          | Return full endpoint information                         |
-| `--all done`        | Return full information only when assessment is complete |
-| `--publish`         | Publish results on SSL Labs public boards                |
-| `--ignore-mismatch` | Proceed even if certificate hostname mismatch            |
+| Flag                | Description                                                         |
+| ------------------- | ------------------------------------------------------------------- |
+| `--new`             | Ignore cached results and start a new assessment                    |
+| `--cache`           | Retrieve cached results only                                        |
+| `--max-age <hours>` | Maximum cache age (requires `--cache`)                              |
+| `--all on`          | Return full endpoint information                                    |
+| `--all done`        | Return full information only when assessment is complete            |
+| `--publish`         | Publish results on SSL Labs public boards                           |
+| `--ignore-mismatch` | Proceed even if certificate hostname mismatch                       |
+| `--base-url`        | Scanning API's base url (default "https://api.ssllabs.com/api/v2/") |
 
 ### Polling & timing
 
@@ -91,6 +109,13 @@ sslcheck -h
 | --------------------- | ------------------------------------------------------- |
 | `--timeout <seconds>` | Global timeout for all assessments (0 disables timeout) |
 | `--steady-polling`    | Disable polling randomization (fixed intervals)         |
+
+### Extra & info
+
+| Flag        | Description                 |
+| ----------- | --------------------------- |
+| `--help`    | Print help info             |
+| `--version` | Print version of sslchecker |
 
 By default, polling intervals are randomized (~20%) on top of SSL Labs recommended delays.
 
@@ -104,7 +129,7 @@ By default, polling intervals are randomized (~20%) on top of SSL Labs recommend
 
 #### Verbose mode
 
-Same as previous sample log, plus:
+Includes the non-verbose output, plus:
 
 - Per-endpoint progress
 
@@ -126,9 +151,9 @@ Same as previous sample log, plus:
 
 ### Parallel / Asynchronous Assessments
 
-Parallel assessment execution is implemented and under active refinement in the following branch: `feat-parallel-assessments`
+Parallel assessment execution is implemented and under active refinement in the following branch: `feat-parallel-assessments`. Use `git checkout feat-parallel-assessments` within the repository folder to test this version.
 
-This work focuses on enabling concurrent scans while respecting SSL Labs API constraints and maintaining accurate progress reporting.
+This work focuses on enabling concurrent scans while respecting SSL Labs API constraints and maintaining accurate progress reporting. It adds two new options: `--parallel` to enable parallel mode and `--max-parallel` to specify the maximum number of assessments running at the same time.
 
 Once edge cases around concurrency limits, retry coordination, and shared state handling are fully validated, the feature will be promoted to the stable release.
 
