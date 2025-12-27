@@ -23,6 +23,7 @@ type scanState struct {
 
 var errMaxTriesExceeded = errors.New("Maximum retries limit reached when scanning one of the hosts\n")
 
+// Calculate a random tip of ~20% of the base delay to add after every hit to the API
 func calculateTicker(baseDelay int, steadyPolling bool, rng *rand.Rand) time.Duration {
 	delay := time.Duration(baseDelay) * time.Second
 
@@ -34,6 +35,7 @@ func calculateTicker(baseDelay int, steadyPolling bool, rng *rand.Rand) time.Dur
 	return delay
 }
 
+// Analyze host one time using API - retrying if it's required
 func analyzeWithRetry(
 	host string,
 	state scanState,
@@ -86,6 +88,7 @@ func analyzeWithRetry(
 	return nil, errMaxTriesExceeded
 }
 
+// Analyze host one time using API - retrying if it's required and with --new = false
 func continueAnalyzeWIthRetry(
 	host string,
 	state scanState,
@@ -97,6 +100,7 @@ func continueAnalyzeWIthRetry(
 	return analyzeWithRetry(host, state)
 }
 
+// Scan a single host - loops until the assessment is complete or the context ends
 func scanHost(host string, state scanState) error {
 	dnsDelay := 5
 	postDnsDelay := 10
@@ -188,6 +192,7 @@ func scanHost(host string, state scanState) error {
 	}
 }
 
+// Scan list of hosts
 func ScanHosts(hosts []string, parameters *domain.ScanParameters, rng *rand.Rand) error {
 
 	verbose := parameters.Verbose

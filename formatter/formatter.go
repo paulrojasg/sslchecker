@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// Write Raw API output into a file
 func WriteRawJSONFile(report *domain.HostReport, parameters *domain.ScanParameters) error {
 
 	file, err := os.OpenFile(
@@ -34,6 +35,7 @@ func WriteRawJSONFile(report *domain.HostReport, parameters *domain.ScanParamete
 	return nil
 }
 
+// Print polling progress
 func PrintEndpointProgress(report domain.HostReport, parameters *domain.ScanParameters) {
 	readyEndpoints := 0
 	for _, endpoint := range report.Endpoints {
@@ -89,6 +91,7 @@ func PrintEndpointProgress(report domain.HostReport, parameters *domain.ScanPara
 	}
 }
 
+// Print final summary
 func PrintHostSummary(report domain.HostReport, parameters *domain.ScanParameters) {
 
 	fmt.Println("\n" + strings.Repeat("=", 60))
