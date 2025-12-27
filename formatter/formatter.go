@@ -118,15 +118,18 @@ func PrintHostSummary(report *domain.HostReport, parameters *domain.ScanParamete
 	session.Println("  " + strings.Repeat("-", 25))
 
 	for _, endpoint := range report.Endpoints {
-		session.Printf("  %-8s  %-15s",
-			"["+endpoint.Grade+"]",
-			endpoint.IPAddress,
-		)
+		var endpointStatusMessage string
+
 		if endpoint.Grade == "" {
-			session.Printf(" | %s\n", endpoint.StatusMessage)
+			endpointStatusMessage = fmt.Sprintf(" | %s\n", endpoint.StatusMessage)
 		} else {
-			session.Println()
+			endpointStatusMessage = "\n"
 		}
+		session.Printf("  %-8s  %-15s%s",
+			"["+endpoint.Grade+"]",
+			endpoint.IPAddress, endpointStatusMessage,
+		)
+
 	}
 
 	if parameters.Verbose {
