@@ -1,10 +1,10 @@
-# SSLCHECK
+# SSLCHECKER
 
 A command-line tool to analyze SSL/TLS configurations using the SSL Labs API, with handling for long-running scans and polling strategies.
 
 ## Overview
 
-SSLCHECK is a CLI tool that performs SSL/TLS assessments for one or more hosts by querying the SSL Labs API.
+SSLCHECKER is a CLI tool that performs SSL/TLS assessments for one or more hosts by querying the SSL Labs API.
 It is designed to be safe, polite to the API, and transparent about scan progress.
 
 The tool supports:
@@ -44,25 +44,25 @@ go build -o sslchecker
 ## Usage
 
 ```bash
-sslcheck [options] <host> [host2 host3 ...]
+sslchecker [options] <host> [host2 host3 ...]
 ```
 
 > [NOTE]
 > Depending on the operating system's settings prepending "./" to the executable may be needed to use the tool:
 
 ```bash
-./sslcheck host
+./sslchecker host
 ```
 
 ### Examples:
 
 ```bash
-sslcheck ssllabs.com
-sslcheck --verbose ssllabs.com
-sslcheck --all on ssllabs.com
-sslcheck --output result.json ssllabs.com
-sslcheck --steady-polling ssllabs.com
-sslcheck --timeout 600 ssllabs.com
+sslchecker ssllabs.com
+sslchecker --verbose ssllabs.com
+sslchecker --all on ssllabs.com
+sslchecker --output result.json ssllabs.com
+sslchecker --steady-polling ssllabs.com
+sslchecker --timeout 600 ssllabs.com
 ```
 
 ## Command-line options
@@ -70,7 +70,7 @@ sslcheck --timeout 600 ssllabs.com
 Print help information
 
 ```bash
-sslcheck -h
+sslchecker -h
 ```
 
 ### Input
