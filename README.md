@@ -47,6 +47,13 @@ go build -o sslchecker
 sslcheck [options] <host> [host2 host3 ...]
 ```
 
+> [NOTE]
+> Depending on the operating system's settings prepending "./" to the executable may be needed to use the tool:
+
+```bash
+./sslcheck host
+```
+
 ### Examples:
 
 ```bash
