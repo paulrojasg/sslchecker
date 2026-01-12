@@ -3,9 +3,10 @@ package formatter
 import (
 	"fmt"
 	"os"
-	"paulrojasg/sslchecker/domain"
 	"strings"
 	"time"
+
+	"github.com/paulrojasg/sslchecker/domain"
 )
 
 // Write Raw API output into a file

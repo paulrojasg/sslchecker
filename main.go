@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
-	"paulrojasg/sslchecker/domain"
-	"paulrojasg/sslchecker/scanner"
 	"strings"
 	"time"
+
+	"github.com/paulrojasg/sslchecker/domain"
+	"github.com/paulrojasg/sslchecker/scanner"
 )
 
 const currentVersion = "1.0.0"
