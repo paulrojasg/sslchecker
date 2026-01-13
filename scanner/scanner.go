@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
-	"paulrojasg/sslchecker/domain"
-	"paulrojasg/sslchecker/formatter"
-	"paulrojasg/sslchecker/ssllabs"
 	"sync"
 	"time"
+
+	"github.com/paulrojasg/sslchecker/domain"
+	"github.com/paulrojasg/sslchecker/formatter"
+	"github.com/paulrojasg/sslchecker/ssllabs"
 )
 
 type scanState struct {

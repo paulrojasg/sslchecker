@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"paulrojasg/sslchecker/domain"
 	"strconv"
+
+	"github.com/paulrojasg/sslchecker/domain"
 )
 
 type Client struct {

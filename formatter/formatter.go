@@ -3,10 +3,11 @@ package formatter
 import (
 	"fmt"
 	"os"
-	"paulrojasg/sslchecker/domain"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/paulrojasg/sslchecker/domain"
 )
 
 var fileLock sync.Mutex
